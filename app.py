@@ -46,7 +46,7 @@ stop_cmd = BotCommand("stop", "прекращение работы бота")
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Sends explanation on how to use the bot."""
     # TODO add username
-    await update.message.reply_text("Hi! Use /set <minutes> to set a timer")
+    await update.message.reply_text("Привет! Чтобы бот заработал напиши: /set <интервал уведомлений>.\n Например: 10 сек, 5 мин., 2 ч., 1 д.")
 
 
 async def alarm(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -61,7 +61,7 @@ async def alarm(context: ContextTypes.DEFAULT_TYPE) -> None:
 
     # Add user name to message
     if 'first_name' in job.data.keys():
-        bot_msg = job.data['first_name'] + ' ' + bot_msg
+        bot_msg = job.data['first_name'] + '! ' + bot_msg
 
     await context.bot.send_message(job.chat_id, text=bot_msg)
 
@@ -89,7 +89,8 @@ async def set_timer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         interval = due
 
         job_removed = remove_job_if_exists(str(chat_id), context)
-        context.job_queue.run_repeating(alarm, interval, chat_id=chat_id, name=str(chat_id), data=context.user_data)
+        job = context.job_queue.run_repeating(alarm, interval, chat_id=chat_id, name=str(chat_id), data=context.user_data)
+
         phrases = load_txt()
 
         if phrases:
@@ -100,6 +101,8 @@ async def set_timer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if job_removed:
             text += " Old one was removed."
         await update.effective_message.reply_text(text)
+        # Run it immediately
+        await job.run(context.application)
 
     except (IndexError, ValueError):
         await update.effective_message.reply_text("Usage: /set <minutes>")
