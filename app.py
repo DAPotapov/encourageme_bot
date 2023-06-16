@@ -12,17 +12,15 @@ First, a few handler functions are defined. Then, those functions are passed to
 the Application and registered at their respective places.
 Then, the bot is started and runs until we press Ctrl-C on the command line.
 
-Usage:
-
-
 Note:
 Based on timerbot.py https://docs.python-telegram-bot.org/en/stable/examples.timerbot.html
 """
 
 import logging
+import os
 import string
 from datetime import datetime, date, time
-from telegram import Update
+from telegram import BotCommand, Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 from pprint import pprint
 from dotenv import load_dotenv
