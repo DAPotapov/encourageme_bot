@@ -22,6 +22,7 @@ import string
 from datetime import datetime, date, time
 from telegram import BotCommand, Update
 from telegram.ext import Application, CommandHandler, ContextTypes
+from random import choice
 from pprint import pprint
 from dotenv import load_dotenv
 
@@ -45,7 +46,7 @@ stop_cmd = BotCommand("stop", "прекращение работы бота")
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Sends explanation on how to use the bot."""
     # TODO add username
-    await update.message.reply_text("Hi! Use /set <seconds> to set a timer")
+    await update.message.reply_text("Hi! Use /set <minutes> to set a timer")
 
 
 async def alarm(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -55,9 +56,23 @@ async def alarm(context: ContextTypes.DEFAULT_TYPE) -> None:
     # TODO connect to file with phrases
     # choose line randomly
     # generate message
+    phrases = [
+        "Ты - молодец!",
+        "У тебя всё получится!",
+        "Ты на верном пути!",
+        "Я тобой горжусь!",
+        "Ты самая лучшая!",
+        "Ты умничка!",
+        "Тебе всё по плечу!",
+        "Весь мир у твоих ног!",
+        "Жизнь прекрасна и удивительна!",
+        "Сегодня будет удачный день! или ночь :)",
+        "Ура тебе!"
+    ]
+    bot_msg = choice(phrases)
 
     #TODO add username to message
-    await context.bot.send_message(job.chat_id, text=f"Beep! {job.data} seconds are over!")
+    await context.bot.send_message(job.chat_id, text=bot_msg)
 
 
 def remove_job_if_exists(name: str, context: ContextTypes.DEFAULT_TYPE) -> bool:
@@ -81,7 +96,8 @@ async def set_timer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             return
 
         job_removed = remove_job_if_exists(str(chat_id), context)
-        context.job_queue.run_once(alarm, due, chat_id=chat_id, name=str(chat_id), data=due)
+        # context.job_queue.run_once(alarm, due, chat_id=chat_id, name=str(chat_id), data=due)
+        context.job_queue.run_repeating(alarm, due*60, chat_id=chat_id, name=str(chat_id), data=due)
 
         text = "Timer successfully set!"
         if job_removed:
@@ -89,7 +105,7 @@ async def set_timer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.effective_message.reply_text(text)
 
     except (IndexError, ValueError):
-        await update.effective_message.reply_text("Usage: /set <seconds>")
+        await update.effective_message.reply_text("Usage: /set <minutes>")
 
 
 async def unset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
