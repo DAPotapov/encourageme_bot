@@ -53,25 +53,16 @@ async def alarm(context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send the alarm message."""
     job = context.job
 
-    # TODO connect to file with phrases
     # choose line randomly
-    # generate message
-    phrases = [
-        "Ты - молодец!",
-        "У тебя всё получится!",
-        "Ты на верном пути!",
-        "Я тобой горжусь!",
-        "Ты самая лучшая!",
-        "Ты умничка!",
-        "Тебе всё по плечу!",
-        "Весь мир у твоих ног!",
-        "Жизнь прекрасна и удивительна!",
-        "Сегодня будет удачный день! или ночь :)",
-        "Ура тебе!"
-    ]
-    bot_msg = choice(phrases)
+    if 'phrases' in job.data.keys():
+        bot_msg = choice(job.data['phrases'])
+    else:
+        bot_msg = "Ты - молодец!"
 
-    #TODO add username to message
+    # Add user name to message
+    if 'first_name' in job.data.keys():
+        bot_msg = job.data['first_name'] + ' ' + bot_msg
+
     await context.bot.send_message(job.chat_id, text=bot_msg)
 
 
@@ -89,15 +80,21 @@ async def set_timer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Add a job to the queue."""
     chat_id = update.effective_message.chat_id
     try:
-        # args[0] should contain the time for the timer in seconds
+        # args[0] should contain the time for the timer
         due = float(context.args[0])
         if due < 0:
             await update.effective_message.reply_text("Sorry we can not go back to future!")
             return
+        # will change this according to input
+        interval = due
 
         job_removed = remove_job_if_exists(str(chat_id), context)
-        # context.job_queue.run_once(alarm, due, chat_id=chat_id, name=str(chat_id), data=due)
-        context.job_queue.run_repeating(alarm, due*60, chat_id=chat_id, name=str(chat_id), data=due)
+        context.job_queue.run_repeating(alarm, interval, chat_id=chat_id, name=str(chat_id), data=context.user_data)
+        phrases = load_txt()
+
+        if phrases:
+            context.user_data['phrases'] = phrases 
+        context.user_data['first_name'] = update.effective_user.first_name
 
         text = "Timer successfully set!"
         if job_removed:
@@ -115,6 +112,18 @@ async def unset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     text = "Timer successfully cancelled!" if job_removed else "You have no active timer."
     await update.message.reply_text(text)
 
+
+def load_txt():
+    """
+    Helper function to load text file with phrases
+    """
+    phrases = []
+    filename = 'data/phrases.txt'
+    # connect to file with phrases
+    with open(filename, 'r') as file:
+        for l in file:
+            phrases.append(l)
+    return phrases
 
 async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
