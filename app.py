@@ -28,7 +28,7 @@ from dotenv import load_dotenv
 
 # Enable logging
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.WARNING
 )
 
 # Set list of commands
@@ -46,7 +46,7 @@ stop_cmd = BotCommand("stop", "прекращение работы бота")
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Sends explanation on how to use the bot."""
     # TODO add username
-    await update.message.reply_text("Привет! Чтобы бот заработал напиши: /set <интервал уведомлений>.\n Например: 10 сек, 5 мин., 2 ч., 1 д.")
+    await update.message.reply_text("Привет! Чтобы бот заработал напиши: /set <интервал уведомлений>.\n Например: 10 сек (по умолчанию), 5 мин., 2 ч., 1 д.")
 
 
 async def alarm(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -80,39 +80,74 @@ async def set_timer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Add a job to the queue."""
     chat_id = update.effective_message.chat_id
     try:
-        # args[0] should contain the time for the timer
-        due = float(context.args[0])
+        # If user provided 1 argument, try to decode it to interval and unit
+        if len(context.args) == 1:
+            digits = ''
+            position = 0
+            for i, c in enumerate(context.args[0]):
+                if c.isdigit():
+                    digits += c
+                    position = i
+                else:
+                    break
+            # If string ended with digit then assume it was seconds
+            if position == (len(context.args[0]) - 1):
+                unit = 'с'
+            else:                
+                unit = context.args[0][position + 1].lower()
+            due = float(digits)    
+        else:
+            due = float(context.args[0])
+            unit = context.args[1][0].lower()
+        
         if due < 0:
             await update.effective_message.reply_text("Sorry we can not go back to future!")
             return
-        # will change this according to input
-        interval = due
+
+        # Set interval according to unit provided
+        match unit:
+            case 'с' | 's': # add in english too
+                interval = due
+                suffix = 'секунд'
+            case 'м' | 'm':
+                interval = due * 60
+                suffix = 'минут'
+            case 'ч' | 'h':
+                interval = due * 60 * 60
+                suffix = 'часов'
+            case 'д' | 'd':
+                interval = due * 60 * 60 * 24
+                suffix = 'дней'
+            case _:
+                interval = due
+                suffix = 'секунд'
 
         job_removed = remove_job_if_exists(str(chat_id), context)
         job = context.job_queue.run_repeating(alarm, interval, chat_id=chat_id, name=str(chat_id), data=context.user_data)
 
+        # Load phrases from file
         phrases = load_txt()
 
         if phrases:
             context.user_data['phrases'] = phrases 
         context.user_data['first_name'] = update.effective_user.first_name
 
-        text = "Timer successfully set!"
+        text = f"Таймер успешно установлен на {due} {suffix}!"
         if job_removed:
-            text += " Old one was removed."
+            text += " Предыдущий таймер удалён."
         await update.effective_message.reply_text(text)
         # Run it immediately
         await job.run(context.application)
 
     except (IndexError, ValueError):
-        await update.effective_message.reply_text("Usage: /set <minutes>")
+        await update.effective_message.reply_text("Использование: /set <интервал уведомлений>.\n Например: 10 сек (по умолчанию), 5 мин., 2 ч., 1 д.")
 
 
 async def unset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Remove the job if the user changed their mind."""
     chat_id = update.message.chat_id
     job_removed = remove_job_if_exists(str(chat_id), context)
-    text = "Timer successfully cancelled!" if job_removed else "You have no active timer."
+    text = "Таймер успешно отключен!" if job_removed else "Таймер не был установлен."
     await update.message.reply_text(text)
 
 
