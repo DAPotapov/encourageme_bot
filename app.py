@@ -31,6 +31,10 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.WARNING
 )
 
+# Set constants to use in web-hook
+ADDRESS = 'PDA.pythonanywhere.com'
+PORT = 8443
+
 # Set list of commands
 help_cmd = BotCommand("help","о боте")
 set_cmd = BotCommand("set", "<интервал> - установка таймера сообщений от бота")
@@ -195,7 +199,17 @@ def main() -> None:
     application.add_handler(CommandHandler("stop", stop))
 
     # Run the bot until the user presses Ctrl-C
-    application.run_polling()
+    # application.run_polling()
+
+    # run application using web hook
+    application.run_webhook(
+        listen=ADDRESS,
+        port=PORT,
+        secret_token=BOT_TOKEN,
+        key='private.key',
+        cert='cert.pem',
+        webhook_url=f'https://{ADDRESS}:{PORT}'
+    )
 
 
 if __name__ == "__main__":
