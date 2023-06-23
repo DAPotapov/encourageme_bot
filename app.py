@@ -20,6 +20,7 @@ import logging
 import os
 import string
 from datetime import datetime, date, time
+from flask import Flask
 from telegram import BotCommand, Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 from random import choice
@@ -34,6 +35,9 @@ logging.basicConfig(
 # Set constants to use in web-hook
 ADDRESS = 'PDA.pythonanywhere.com'
 PORT = 8443
+
+# Set Flask application
+app = Flask(__name__)
 
 # Set list of commands
 help_cmd = BotCommand("help","о боте")
@@ -183,6 +187,7 @@ async def post_init(application: Application):
                                         ])
 
 
+@app.route("/", methods=["GET", "POST"])
 def main() -> None:
     """Run bot."""
 
@@ -206,8 +211,8 @@ def main() -> None:
         listen=ADDRESS,
         port=PORT,
         secret_token=BOT_TOKEN,
-        key='private.key',
-        cert='cert.pem',
+        # key='private.key', # PAW provide sert itself
+        # cert='cert.pem',
         webhook_url=f'https://{ADDRESS}:{PORT}'
     )
 
