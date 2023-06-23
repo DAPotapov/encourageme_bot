@@ -191,8 +191,12 @@ async def post_init(application: Application):
 def main() -> None:
     """Run bot."""
 
-    load_dotenv()
-    BOT_TOKEN = os.environ.get("BOT_TOKEN")
+    # .env variables loaded in WSGI file
+    # load_dotenv()
+    # Just use line from example
+    # BOT_TOKEN = os.environ.get("BOT_TOKEN")
+    BOT_TOKEN = os.getenv("BOT_TOKEN")
+    print(BOT_TOKEN)
 
     # Create the Application and pass it your bot's token.
     application = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
@@ -211,7 +215,7 @@ def main() -> None:
         listen=ADDRESS,
         port=PORT,
         secret_token=BOT_TOKEN,
-        # key='private.key', # PAW provide sert itself
+        # key='private.key', # PAW provide cert itself
         # cert='cert.pem',
         webhook_url=f'https://{ADDRESS}:{PORT}'
     )
