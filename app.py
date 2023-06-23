@@ -156,7 +156,7 @@ def load_txt():
     Helper function to load text file with phrases
     """
     phrases = []
-    filename = 'data/phrases.txt'
+    filename = 'files/phrases.txt'
     # connect to file with phrases
     with open(filename, 'r') as file:
         for l in file:
