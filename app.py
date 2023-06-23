@@ -193,11 +193,10 @@ def main() -> None:
 
     # .env variables loaded in WSGI file
     # load_dotenv()
-    # Just use line from example
     BOT_TOKEN = os.environ.get("BOT_TOKEN")
     # BOT_TOKEN = os.getenv("BOT_TOKEN")
-    print(f"Current token: {BOT_TOKEN}")
-    print(f"and to test env loading: {os.getenv('PATH')}")
+    # print(f"Current token: {BOT_TOKEN}")
+    # print(f"and to test env loading: {os.getenv('PATH')}")
 
     # Create the Application and pass it your bot's token.
     application = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
