@@ -210,11 +210,12 @@ def main() -> None:
     # Run the bot until the user presses Ctrl-C
     # application.run_polling()
 
+    TOKEN = BOT_TOKEN[11:]
     # run application using web hook
     application.run_webhook(
         listen='0.0.0.0',
         port=PORT,
-        secret_token=BOT_TOKEN,
+        secret_token=TOKEN,
         # key='private.key', # PAW provide cert itself
         # cert='cert.pem',
         # webhook_url=f'https://{ADDRESS}:{PORT}'
