@@ -163,11 +163,6 @@ def load_txt():
             phrases.append(l)
     return phrases
 
-async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    TODO should delete all jobs for user
-    """
-
 
 # Function to control list of commands in bot itself. Commands itself are global
 async def post_init(application: Application):
@@ -192,7 +187,7 @@ def main() -> None:
     application.add_handler(CommandHandler(["start", "help"], start))
     application.add_handler(CommandHandler("set", set_timer))
     application.add_handler(CommandHandler("unset", unset))
-    application.add_handler(CommandHandler("stop", stop))
+    application.add_handler(CommandHandler("stop", unset))
 
     # Run the bot until the user presses Ctrl-C
     application.run_polling()
