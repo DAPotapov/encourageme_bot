@@ -21,7 +21,7 @@ import os
 import string
 from datetime import datetime, date, time
 from telegram import BotCommand, Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 from random import choice
 from pprint import pprint
 from dotenv import load_dotenv
@@ -45,8 +45,11 @@ stop_cmd = BotCommand("stop", "прекращение работы бота")
 # we decided to have it present as context.
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Sends explanation on how to use the bot."""
-    # TODO add username
-    await update.message.reply_text("Привет! Чтобы бот заработал напиши: /set <интервал уведомлений>.\n Например: 10 сек (по умолчанию), 5 мин., 2 ч., 1 д.")
+    await update.message.reply_text(f"Привет, {update.effective_user.first_name}! Чтобы бот заработал напиши:\n"
+                                    f"/set <интервал уведомлений>.\n"
+                                    f"или просто укажи этот интервал."
+                                    f"Например: 13 сек, 6 мин., 3 ч., 1 д."
+                                    )
 
 
 async def alarm(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -188,6 +191,8 @@ def main() -> None:
     application.add_handler(CommandHandler("set", set_timer))
     application.add_handler(CommandHandler("unset", unset))
     application.add_handler(CommandHandler("stop", unset))
+    application.add_handler(MessageHandler(filters.TEXT, text))
+    
 
     # Run the bot until the user presses Ctrl-C
     application.run_polling()
