@@ -35,7 +35,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Sends explanation on how to use the bot."""
     await update.message.reply_text(f"Привет, {update.effective_user.first_name}! Чтобы бот заработал напиши:\n"
                                     f"/set <интервал уведомлений>.\n"
-                                    f"или просто укажи этот интервал."
+                                    f"или просто укажи этот интервал.\n"
                                     f"Например: 13 сек, 6 мин., 3 ч., 1 д."
                                     )
 
@@ -71,8 +71,10 @@ async def set_timer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler of /set command"""
     chat_id = update.effective_user.id
     try:
-        bot_msg = set_job(str(chat_id), str(context.args), context) 
+        bot_msg, job = set_job(str(chat_id), ''.join(context.args), context) 
         await update.effective_message.reply_text(bot_msg)
+        if job:
+            await job.run(context.application)
     except (IndexError, ValueError):
         await update.effective_message.reply_text("Использование: /set <интервал уведомлений>.\n"
                                                   "Например: 13 сек, 6 мин., 3 ч., 1 д.")
@@ -82,9 +84,12 @@ async def text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """ Handler for text input from user"""
     text = update.message.text
     chat_id = update.effective_user.id
-    bot_msg = set_job(str(chat_id), text, context)
+    bot_msg, job = set_job(str(chat_id), text, context)
     if bot_msg:        
         await update.message.reply_text(bot_msg)
+        if job:
+            await job.run(context.application)
+        # job = context.job_queue.get_jobs_by_name(str(chat_id))
     else:
         logger.info(f'{tm.asctime()}\t{user.id} ({user.username}) wrote: {text}')
 
@@ -106,7 +111,7 @@ def set_job(chat_id: str, text: str, context: ContextTypes.DEFAULT_TYPE):
             due = int(interval[0])
             suffix = 'секунд'
         else:
-            return nonvalid
+            return nonvalid, None
     else:    
         # Recognize minutes
         p = re.compile(r'\d+ ?[мm]', re.IGNORECASE)
@@ -118,7 +123,7 @@ def set_job(chat_id: str, text: str, context: ContextTypes.DEFAULT_TYPE):
                 due = int(interval[0]) * 60
                 suffix = 'минут'
             else:
-                return nonvalid
+                return nonvalid, None
         else:    
             # Recognize hours
             p = re.compile(r'\d+ ?[чh]', re.IGNORECASE)
@@ -130,7 +135,7 @@ def set_job(chat_id: str, text: str, context: ContextTypes.DEFAULT_TYPE):
                     due = int(interval[0]) * 60 * 60
                     suffix = 'часов'
                 else:
-                    return nonvalid
+                    return nonvalid, None
             else:
                 # Recognize days 
                 p = re.compile(r'\d+ ?[дd]', re.IGNORECASE)
@@ -142,9 +147,9 @@ def set_job(chat_id: str, text: str, context: ContextTypes.DEFAULT_TYPE):
                         due = int(interval[0]) * 60 * 60 * 24
                         suffix = 'дней'
                     else:
-                        return nonvalid
+                        return nonvalid, None
                 else:
-                    return nonvalid
+                    return nonvalid, None
     
     # If there is interval specified then schedule a job and inform user
     if due:
@@ -163,9 +168,9 @@ def set_job(chat_id: str, text: str, context: ContextTypes.DEFAULT_TYPE):
 
         # Run it immediately
         # await job.run(context.application)
-        return bot_msg
+        return bot_msg, job
     else:
-        return nonvalid
+        return nonvalid, None
 
 
 async def unset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
