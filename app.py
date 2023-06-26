@@ -1,16 +1,5 @@
-#!/usr/bin/env python
-# pylint: disable=unused-argument, wrong-import-position
-# This program is dedicated to the public domain under the CC0 license.
-
 """
-Simple Bot to send timed Telegram messages.
-
-This Bot uses the Application class to handle the bot and the JobQueue to send
-timed messages.
-
-First, a few handler functions are defined. Then, those functions are passed to
-the Application and registered at their respective places.
-Then, the bot is started and runs until we press Ctrl-C on the command line.
+Bot sends motivational messages in interval set by user
 
 Note:
 Based on timerbot.py https://docs.python-telegram-bot.org/en/stable/examples.timerbot.html
@@ -82,74 +71,18 @@ def remove_job_if_exists(name: str, context: ContextTypes.DEFAULT_TYPE) -> bool:
 
 
 async def set_timer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Add a job to the queue."""
+    """Handler of /set command"""
     chat_id = update.effective_user.id
     try:
-        # If user provided 1 argument, try to decode it to interval and unit
-        if len(context.args) == 1:
-            digits = ''
-            position = 0
-            for i, c in enumerate(context.args[0]):
-                if c.isdigit():
-                    digits += c
-                    position = i
-                else:
-                    break
-            # If string ended with digit then assume it was seconds
-            if position == (len(context.args[0]) - 1):
-                unit = 'с'
-            else:                
-                unit = context.args[0][position + 1].lower()
-            due = float(digits)    
-        else:
-            due = float(context.args[0])
-            unit = context.args[1][0].lower()
-        
-        if due < 0:
-            await update.effective_message.reply_text("Sorry we can not go back to future!")
-            return
-
-        # Set interval according to unit provided
-        match unit:
-            case 'с' | 's': # add in english too
-                interval = due
-                suffix = 'секунд'
-            case 'м' | 'm':
-                interval = due * 60
-                suffix = 'минут'
-            case 'ч' | 'h':
-                interval = due * 60 * 60
-                suffix = 'часов'
-            case 'д' | 'd':
-                interval = due * 60 * 60 * 24
-                suffix = 'дней'
-            case _:
-                interval = due
-                suffix = 'секунд'
-
-        job_removed = remove_job_if_exists(str(chat_id), context)
-        job = context.job_queue.run_repeating(alarm, interval, chat_id=chat_id, name=str(chat_id), data=context.user_data)
-
-        # Load phrases from file
-        phrases = load_txt()
-
-        if phrases:
-            context.user_data['phrases'] = phrases 
-        context.user_data['first_name'] = update.effective_user.first_name
-
-        text = f"Таймер успешно установлен на {due} {suffix}!"
-        if job_removed:
-            text += " Предыдущий таймер удалён."
-        await update.effective_message.reply_text(text)
-        # Run it immediately
-        await job.run(context.application)
-
+        bot_msg = set_job(str(chat_id), str(context.args), context) 
+        await update.effective_message.reply_text(bot_msg)
     except (IndexError, ValueError):
-        await update.effective_message.reply_text("Использование: /set <интервал уведомлений>.\n Например: 10 сек (по умолчанию), 5 мин., 2 ч., 1 д.")
+        await update.effective_message.reply_text("Использование: /set <интервал уведомлений>.\n"
+                                                  "Например: 13 сек, 6 мин., 3 ч., 1 д.")
 
 
 async def text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Parse text input and set job accordingly."""
+    """ Handler for text input from user"""
     # bot_msg = ("Пока я только команды понимаю, извини...\n"
     #             "Но вот, что я смог распознать:\n")
     text = update.message.text
