@@ -31,6 +31,7 @@ from dotenv import load_dotenv
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.WARNING
 )
+logger = logging.getLogger(__name__)
 
 # Set list of commands
 help_cmd = BotCommand("help","о боте")
@@ -82,7 +83,7 @@ def remove_job_if_exists(name: str, context: ContextTypes.DEFAULT_TYPE) -> bool:
 
 async def set_timer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Add a job to the queue."""
-    chat_id = update.effective_message.chat_id
+    chat_id = update.effective_user.id
     try:
         # If user provided 1 argument, try to decode it to interval and unit
         if len(context.args) == 1:
@@ -149,8 +150,100 @@ async def set_timer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Parse text input and set job accordingly."""
-    bot_msg = "Пока я только команды понимаю, извини..."
-    await update.message.reply_text(bot_msg)
+    # bot_msg = ("Пока я только команды понимаю, извини...\n"
+    #             "Но вот, что я смог распознать:\n")
+    text = update.message.text
+    chat_id = update.effective_user.id
+    bot_msg = set_job(str(chat_id), text, context)
+    if bot_msg:        
+        await update.message.reply_text(bot_msg)
+    else:
+        logger.info(f'{tm.asctime()}\t{user.id} ({user.username}) wrote: {text}')
+
+
+def set_job(chat_id: str, text: str, context: ContextTypes.DEFAULT_TYPE):
+    ''' Recognize interval and set job accordingly'''
+    interval, due = None, None
+    suffix = None
+    nonvalid = (f"Не, это понятно, но какой интервал времени задать?"
+                "Например: 13 сек, 6 мин., 3 ч., 1 д.")
+    
+    # Recognize seconds
+    p = re.compile(r'\d+ ?[сs]', re.IGNORECASE)
+    found = re.search(p, text)
+    if found:
+        p = re.compile(r'\d+', re.IGNORECASE)
+        interval = re.search(p, found[0])
+        if interval:            
+            due = int(interval[0])
+            suffix = 'секунд'
+        else:
+            return nonvalid
+    else:
+        return nonvalid
+    
+    # Recognize minutes
+    p = re.compile(r'\d+ ?[мm]', re.IGNORECASE)
+    found = re.search(p, text)
+    if found:
+        p = re.compile(r'\d+', re.IGNORECASE)
+        interval = re.search(p, found[0])
+        if interval:            
+            due = int(interval[0]) * 60
+            suffix = 'минут'
+        else:
+            return nonvalid
+    else:
+        return nonvalid    
+    
+    # Recognize hours
+    p = re.compile(r'\d+ ?[чh]', re.IGNORECASE)
+    found = re.search(p, text)
+    if found:
+        p = re.compile(r'\d+', re.IGNORECASE)
+        interval = re.search(p, found[0])
+        if interval:            
+            due = int(interval[0]) * 60 * 60
+            suffix = 'часов'
+        else:
+            return nonvalid
+    else:
+        return nonvalid
+    # Recognize days 
+    p = re.compile(r'\d+ ?[дd]', re.IGNORECASE)
+    found = re.search(p, text)
+    if found:
+        p = re.compile(r'\d+', re.IGNORECASE)
+        interval = re.search(p, found[0])
+        if interval:            
+            due = int(interval[0]) * 60 * 60 * 24
+            suffix = 'дней'
+        else:
+            return nonvalid
+    else:
+        return nonvalid 
+    
+    # If there is interval specified then schedule a job and inform user
+    if due:
+        job_removed = remove_job_if_exists(str(chat_id), context)
+        job = context.job_queue.run_repeating(alarm, due, chat_id=chat_id, name=str(chat_id), data=context.user_data)
+
+        # Load phrases from file
+        phrases = load_txt()
+
+        if phrases:
+            context.user_data['phrases'] = phrases 
+
+        bot_msg = f"Таймер успешно установлен на {due} {suffix}!"
+        if job_removed:
+            bot_msg += " Предыдущий таймер удалён."
+
+        # Run it immediately
+        await job.run(context.application)
+
+        return bot_msg
+    else:
+        return nonvalid
 
 
 async def unset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
