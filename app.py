@@ -8,12 +8,9 @@ Based on timerbot.py https://docs.python-telegram-bot.org/en/stable/examples.tim
 import logging
 import os
 import re
-import string
-from datetime import datetime, date, time
 from telegram import BotCommand, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 from random import choice
-from pprint import pprint
 from dotenv import load_dotenv
 
 # Enable logging
@@ -83,8 +80,6 @@ async def set_timer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """ Handler for text input from user"""
-    # bot_msg = ("Пока я только команды понимаю, извини...\n"
-    #             "Но вот, что я смог распознать:\n")
     text = update.message.text
     chat_id = update.effective_user.id
     bot_msg = set_job(str(chat_id), text, context)
@@ -112,49 +107,44 @@ def set_job(chat_id: str, text: str, context: ContextTypes.DEFAULT_TYPE):
             suffix = 'секунд'
         else:
             return nonvalid
-    else:
-        return nonvalid
-    
-    # Recognize minutes
-    p = re.compile(r'\d+ ?[мm]', re.IGNORECASE)
-    found = re.search(p, text)
-    if found:
-        p = re.compile(r'\d+', re.IGNORECASE)
-        interval = re.search(p, found[0])
-        if interval:            
-            due = int(interval[0]) * 60
-            suffix = 'минут'
-        else:
-            return nonvalid
-    else:
-        return nonvalid    
-    
-    # Recognize hours
-    p = re.compile(r'\d+ ?[чh]', re.IGNORECASE)
-    found = re.search(p, text)
-    if found:
-        p = re.compile(r'\d+', re.IGNORECASE)
-        interval = re.search(p, found[0])
-        if interval:            
-            due = int(interval[0]) * 60 * 60
-            suffix = 'часов'
-        else:
-            return nonvalid
-    else:
-        return nonvalid
-    # Recognize days 
-    p = re.compile(r'\d+ ?[дd]', re.IGNORECASE)
-    found = re.search(p, text)
-    if found:
-        p = re.compile(r'\d+', re.IGNORECASE)
-        interval = re.search(p, found[0])
-        if interval:            
-            due = int(interval[0]) * 60 * 60 * 24
-            suffix = 'дней'
-        else:
-            return nonvalid
-    else:
-        return nonvalid 
+    else:    
+        # Recognize minutes
+        p = re.compile(r'\d+ ?[мm]', re.IGNORECASE)
+        found = re.search(p, text)
+        if found:
+            p = re.compile(r'\d+', re.IGNORECASE)
+            interval = re.search(p, found[0])
+            if interval:            
+                due = int(interval[0]) * 60
+                suffix = 'минут'
+            else:
+                return nonvalid
+        else:    
+            # Recognize hours
+            p = re.compile(r'\d+ ?[чh]', re.IGNORECASE)
+            found = re.search(p, text)
+            if found:
+                p = re.compile(r'\d+', re.IGNORECASE)
+                interval = re.search(p, found[0])
+                if interval:            
+                    due = int(interval[0]) * 60 * 60
+                    suffix = 'часов'
+                else:
+                    return nonvalid
+            else:
+                # Recognize days 
+                p = re.compile(r'\d+ ?[дd]', re.IGNORECASE)
+                found = re.search(p, text)
+                if found:
+                    p = re.compile(r'\d+', re.IGNORECASE)
+                    interval = re.search(p, found[0])
+                    if interval:            
+                        due = int(interval[0]) * 60 * 60 * 24
+                        suffix = 'дней'
+                    else:
+                        return nonvalid
+                else:
+                    return nonvalid
     
     # If there is interval specified then schedule a job and inform user
     if due:
@@ -167,13 +157,12 @@ def set_job(chat_id: str, text: str, context: ContextTypes.DEFAULT_TYPE):
         if phrases:
             context.user_data['phrases'] = phrases 
 
-        bot_msg = f"Таймер успешно установлен на {due} {suffix}!"
+        bot_msg = f"Таймер успешно установлен на {int(interval[0])} {suffix}!"
         if job_removed:
             bot_msg += " Предыдущий таймер удалён."
 
         # Run it immediately
-        await job.run(context.application)
-
+        # await job.run(context.application)
         return bot_msg
     else:
         return nonvalid
