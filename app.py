@@ -18,6 +18,7 @@ Based on timerbot.py https://docs.python-telegram-bot.org/en/stable/examples.tim
 
 import logging
 import os
+import re
 import string
 from datetime import datetime, date, time
 from telegram import BotCommand, Update
@@ -146,6 +147,12 @@ async def set_timer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.effective_message.reply_text("Использование: /set <интервал уведомлений>.\n Например: 10 сек (по умолчанию), 5 мин., 2 ч., 1 д.")
 
 
+async def text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Parse text input and set job accordingly."""
+    bot_msg = "Пока я только команды понимаю, извини..."
+    await update.message.reply_text(bot_msg)
+
+
 async def unset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Remove the job if the user changed their mind."""
     chat_id = update.message.chat_id
@@ -190,6 +197,10 @@ def main() -> None:
     application.add_handler(CommandHandler(["start", "help"], start))
     application.add_handler(CommandHandler("set", set_timer))
     application.add_handler(CommandHandler("unset", unset))
+    application.add_handler(MessageHandler(filters.Regex(re.compile(r'стоп|останов|отмен'
+                                                                    '|переста|хорош|довольно'
+                                                                    '|хватит|stop|sta*hp',
+                                                                    re.IGNORECASE)), unset))
     application.add_handler(CommandHandler("stop", unset))
     application.add_handler(MessageHandler(filters.TEXT, text))
     
