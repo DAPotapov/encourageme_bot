@@ -8,19 +8,25 @@ Based on timerbot.py https://docs.python-telegram-bot.org/en/stable/examples.tim
 import logging
 import os
 import re
-from telegram import BotCommand, Update
-from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, Update
+from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes, ConversationHandler, MessageHandler, filters
 from random import choice
 from dotenv import load_dotenv
 
 # Enable logging
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.WARNING
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
+GENDER = 'Ж'
+
+# Constants for conversation
+FIRST_LVL = 0
+
 # Set list of commands
 help_cmd = BotCommand("help","о боте")
+start_cmd = BotCommand("start","запуск бота сначала")
 set_cmd = BotCommand("set", "<интервал> - установка таймера сообщений от бота")
 unset_cmd = BotCommand("unset", "отключить уведомления")
 stop_cmd = BotCommand("stop", "прекращение работы бота")
@@ -31,14 +37,39 @@ stop_cmd = BotCommand("stop", "прекращение работы бота")
 # since context is an unused local variable.
 # This being an example and not having context present confusing beginners,
 # we decided to have it present as context.
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Sends explanation on how to use the bot."""
-    await update.message.reply_text(f"Привет, {update.effective_user.first_name}! Чтобы бот заработал напиши:\n"
-                                    f"/set <интервал уведомлений>.\n"
-                                    f"или просто укажи этот интервал.\n"
+    bot_msg = (f"Привет, {update.effective_user.first_name}!\n"
+                f"Какой пол должен использовать бот в сообщениях?"
+    )
+    # TODO add picture of man or woman
+    keyboard = [[
+        InlineKeyboardButton("М", callback_data="М"),
+        InlineKeyboardButton("Ж", callback_data="Ж"),
+        ]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(bot_msg, reply_markup=reply_markup)
+    return FIRST_LVL
+
+
+async def user_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    query = update.callback_query
+    await query.answer()
+    GENDER = query.data
+    bot_msg = (f"Теперь чтобы бот заработал напиши\n"
+                f"через какой интервал времени должны приходить уведомления от бота:\n"
+                f"Например: 13 сек, 6 мин., 3 ч., 1 д.")
+    await query.edit_message_text(bot_msg)
+    return ConversationHandler.END
+
+
+async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Sends explanation on how to use the bot."""
+    await update.message.reply_text(f"Привет, {update.effective_user.first_name}! Чтобы бот заработал напиши\n"
+                                    f"через какой интервал времени должны приходить уведомления от бота:\n"
                                     f"Например: 13 сек, 6 мин., 3 ч., 1 д."
                                     )
-
+    
 
 async def alarm(context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send the alarm message."""
@@ -155,12 +186,12 @@ def set_job(chat_id: str, text: str, context: ContextTypes.DEFAULT_TYPE):
     if due:
         job_removed = remove_job_if_exists(str(chat_id), context)
         job = context.job_queue.run_repeating(alarm, due, chat_id=chat_id, name=str(chat_id), data=context.user_data)
-
         # Load phrases from file
         phrases = load_txt()
 
         if phrases:
             context.user_data['phrases'] = phrases 
+
 
         bot_msg = f"Таймер успешно установлен на {int(interval[0])} {suffix}!"
         if job_removed:
@@ -186,7 +217,11 @@ def load_txt():
     Helper function to load text file with phrases
     """
     phrases = []
-    filename = 'files/phrases.txt'
+    if GENDER == "Ж":
+        filename = 'files/phrases.txt'
+    else:
+        filename = 'files/phrases_m.txt'
+
     # connect to file with phrases
     with open(filename, 'r') as file:
         for l in file:
@@ -198,6 +233,7 @@ def load_txt():
 async def post_init(application: Application):
     await application.bot.set_my_commands([
                                         help_cmd,
+                                        start_cmd,
                                         set_cmd,
                                         unset_cmd,
                                         stop_cmd
@@ -214,7 +250,7 @@ def main() -> None:
     application = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
 
     # on different commands - answer in Telegram
-    application.add_handler(CommandHandler(["start", "help"], start))
+    application.add_handler(CommandHandler("help", help))
     application.add_handler(CommandHandler("set", set_timer))
     application.add_handler(CommandHandler("unset", unset))
     application.add_handler(MessageHandler(filters.Regex(re.compile(r'стоп|останов|отмен'
@@ -222,8 +258,17 @@ def main() -> None:
                                                                     '|хватит|stop|sta*hp',
                                                                     re.IGNORECASE)), unset))
     application.add_handler(CommandHandler("stop", unset))
-    application.add_handler(MessageHandler(filters.TEXT, text))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text))
     
+    # Conversation handler for gender
+    gender_conv = ConversationHandler(
+        entry_points = [CommandHandler("start", start)],
+        states = {
+            FIRST_LVL: [CallbackQueryHandler(user_answer)],
+        },
+        fallbacks=[MessageHandler(filters.TEXT & ~filters.COMMAND, user_answer)]
+    )
+    application.add_handler(gender_conv)
 
     # Run the bot until the user presses Ctrl-C
     application.run_polling()
