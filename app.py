@@ -8,17 +8,18 @@ Based on timerbot.py https://docs.python-telegram-bot.org/en/stable/examples.tim
 import logging
 import os
 import re
-from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, Update
+from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes, ConversationHandler, MessageHandler, filters
 from random import choice
 from dotenv import load_dotenv
 
 # Enable logging
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.WARNING
 )
 logger = logging.getLogger(__name__)
 
+# Default gender is female in dedication to Maria S.
 GENDER = 'Ж'
 
 # Constants for conversation
@@ -47,7 +48,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         InlineKeyboardButton("М", callback_data="М"),
         InlineKeyboardButton("Ж", callback_data="Ж"),
         ]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    reply_markup = InlineKeyboardMarkup(keyboard)    
     await update.message.reply_text(bot_msg, reply_markup=reply_markup)
     return FIRST_LVL
 
@@ -249,20 +250,20 @@ def main() -> None:
     # Create the Application and pass it your bot's token.
     application = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
 
-    # on different commands - answer in Telegram
-    application.add_handler(CommandHandler("help", help))
-    application.add_handler(CommandHandler("set", set_timer))
-    application.add_handler(CommandHandler("unset", unset))
+    # Register handlers for commands
+    application.add_handler(CommandHandler(help_cmd.command, help))
+    application.add_handler(CommandHandler(set_cmd.command, set_timer))
+    application.add_handler(CommandHandler(unset_cmd.command, unset))
     application.add_handler(MessageHandler(filters.Regex(re.compile(r'стоп|останов|отмен'
                                                                     '|переста|хорош|довольно'
                                                                     '|хватит|stop|sta*hp',
                                                                     re.IGNORECASE)), unset))
-    application.add_handler(CommandHandler("stop", unset))
+    application.add_handler(CommandHandler(stop_cmd.command, unset))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text))
     
     # Conversation handler for gender
     gender_conv = ConversationHandler(
-        entry_points = [CommandHandler("start", start)],
+        entry_points = [CommandHandler(start_cmd.command, start)],
         states = {
             FIRST_LVL: [CallbackQueryHandler(user_answer)],
         },
