@@ -9,7 +9,14 @@ import logging
 import os
 import re
 from telegram import BotCommand, InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes, ConversationHandler, MessageHandler, filters
+from telegram.ext import (
+    Application, 
+    CallbackQueryHandler, 
+    CommandHandler, 
+    ContextTypes, 
+    ConversationHandler, 
+    MessageHandler, 
+    filters)
 from random import choice
 from dotenv import load_dotenv
 
@@ -55,12 +62,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 async def user_answer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
+    user = update.effective_user
     await query.answer()
     GENDER = query.data
     bot_msg = (f"Теперь чтобы бот заработал напиши\n"
                 f"через какой интервал времени должны приходить уведомления от бота:\n"
                 f"Например: 13 сек, 6 мин., 3 ч., 1 д.")
     await query.edit_message_text(bot_msg)
+    logger.warning(f"{user.id} ({user.username}) answer: {GENDER}")
+
     return ConversationHandler.END
 
 
@@ -115,6 +125,7 @@ async def set_timer(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """ Handler for text input from user"""
     text = update.message.text
+    user = update.effective_user
     chat_id = update.effective_user.id
     bot_msg, job = set_job(str(chat_id), text, context)
     if bot_msg:        
@@ -122,8 +133,9 @@ async def text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         if job:
             await job.run(context.application)
         # job = context.job_queue.get_jobs_by_name(str(chat_id))
+        logger.warning(f'{user.id} ({user.username}) wrote: {text}')
     else:
-        logger.info(f'{tm.asctime()}\t{user.id} ({user.username}) wrote: {text}')
+        logger.error(f'{user.id} ({user.username}) wrote: {text}')
 
 
 def set_job(chat_id: str, text: str, context: ContextTypes.DEFAULT_TYPE):
