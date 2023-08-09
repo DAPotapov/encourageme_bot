@@ -88,7 +88,7 @@ async def alarm(context: ContextTypes.DEFAULT_TYPE) -> None:
 
     # choose line randomly
     if 'phrases' in job.data.keys():
-        bot_msg = choice(job.data['phrases'])
+        bot_msg = choice(job.data['phrases']) + ' (via @encorageme_bot)'
     else:
         bot_msg = "Ты - молодец!"
 
